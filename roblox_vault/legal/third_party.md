@@ -1,5 +1,5 @@
 THIRD-PARTY SOFTWARE & LICENSES
-Version 2026-10-11
+Version 2026-10-12
 
 Audit of everything the app uses. None of these collect or send data.
 

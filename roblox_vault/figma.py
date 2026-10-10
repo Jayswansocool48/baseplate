@@ -123,20 +123,36 @@ def _get(path: str, params: dict | None = None, token: str | None = None) -> dic
         with urllib.request.urlopen(req, timeout=20) as r:
             return json.load(r)
     except urllib.error.HTTPError as e:
-        msg = {
-            403: "Figma said no. Your connection may have expired, so connect again.",
-            404: "Figma couldn't find that file. Do you have access to it?",
-            429: "You've hit Figma's import limit for now. Free and View seats only "
-                 "get a few imports a month; it resets later.",
-        }
-        raise core.VaultError(msg.get(e.code, f"Figma error {e.code}."))
+        raise core.VaultError(_explain(e.code, _figma_reason(e)))
     except (urllib.error.URLError, TimeoutError):
         raise core.VaultError("Couldn't reach Figma. Check your internet connection.")
 
 
-def whoami(token: str) -> str:
-    """Cheap check that a token works. Returns the Figma handle."""
-    return _get("/me", token=token).get("handle", "you")
+def _figma_reason(e) -> str:
+    """Figma's own short error text ('Invalid token', ...), if it sent one."""
+    try:
+        body = json.loads(e.read() or b"{}")
+    except (ValueError, OSError):
+        return ""
+    return str(body.get("err") or body.get("message") or "")[:200]
+
+
+def _explain(code: int, reason: str) -> str:
+    low = reason.lower()
+    if code in (401, 403) and ("token" in low or "expired" in low or code == 401):
+        disconnect(remove_web=False)  # next Import walks you through Connect again
+        return ("Your Figma token was refused (" + (reason or "invalid") + "). "
+                "Press Import again to connect a new one.")
+    if code == 403:
+        return ("Figma refused access" + (f" ({reason})" if reason else "") + ". "
+                "Make sure the token has File content: read-only access and "
+                "that you can open this file in the Figma tab.")
+    if code == 404:
+        return "Figma couldn't find that file. Do you have access to it?"
+    if code == 429:
+        return ("You've hit Figma's import limit for now. Free and View seats only "
+                "get a few imports a month; it resets later.")
+    return f"Figma error {code}" + (f": {reason}" if reason else ".")
 
 
 def fetch_nodes(file_key: str, node_ids: list[str]) -> dict:

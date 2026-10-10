@@ -1,5 +1,5 @@
 PRIVACY POLICY
-Version 2026-10-11
+Version 2026-10-12
 
 Who we are
 Roblox Vault is made by {owner_name}. Contact: {contact}
@@ -40,9 +40,10 @@ this one. Menu -> Figma -> Sign out deletes them.
 Connecting Figma. To import designs, the app needs a Figma access token. When
 you press Connect, the app watches your clipboard ONLY while the blue
 "Connecting" bar is showing, ONLY looks for text starting with "figd_", and
-ignores everything else. When it finds your token it stops watching, checks it
-with Figma once, saves it (readable only by your user account) and wipes it
-from the clipboard.
+ignores everything else. When it finds your token it stops watching, saves it
+(readable only by your user account) and wipes it from the clipboard. Nothing
+is sent to Figma until you import. If Figma rejects the token, the app deletes
+it.
 
 Importing. When you press Import or Update, the app sends the token and the
 file/frame ID to api.figma.com and reads back that frame's layers. Nothing

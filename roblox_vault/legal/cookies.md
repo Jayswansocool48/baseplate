@@ -1,5 +1,5 @@
 COOKIE POLICY
-Version 2026-10-11
+Version 2026-10-12
 
 Roblox Vault itself uses no cookies, web storage, tracking pixels or
 fingerprinting.

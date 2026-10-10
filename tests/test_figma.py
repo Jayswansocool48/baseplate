@@ -148,6 +148,29 @@ class FigmaTests(unittest.TestCase):
         core.delete_all_data()
         self.assertIsNone(figma.get_token())
 
+    def test_refused_token_is_explained_and_forgotten(self):
+        import io
+        import urllib.error
+        from unittest import mock
+        figma.set_token("figd_" + "x" * 30)
+
+        def refuse(body):
+            def fake(*_a, **_k):
+                raise urllib.error.HTTPError("u", 403, "Forbidden", {}, io.BytesIO(body))
+            return fake
+        with mock.patch("urllib.request.urlopen", refuse(b'{"status":403,"err":"Invalid token"}')):
+            with self.assertRaises(core.VaultError) as cm:
+                figma.fetch_nodes("KEY", ["1:2"])
+        self.assertIn("Invalid token", str(cm.exception))
+        self.assertIsNone(figma.get_token(), "a rejected token must be deleted")
+        # a permission problem on one file keeps the token
+        figma.set_token("figd_" + "x" * 30)
+        with mock.patch("urllib.request.urlopen", refuse(b'{"err":"Forbidden"}')):
+            with self.assertRaises(core.VaultError) as cm:
+                figma.fetch_nodes("KEY", ["1:2"])
+        self.assertIn("File content", str(cm.exception))
+        self.assertIsNotNone(figma.get_token())
+
     def test_no_token_means_no_network(self):
         with self.assertRaises(core.VaultError):
             figma.fetch_nodes("KEY", ["1:2"])

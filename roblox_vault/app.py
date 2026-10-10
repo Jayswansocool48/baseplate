@@ -484,26 +484,22 @@ class FigmaPane(Gtk.Box):
             if not token:
                 return
             self.stop_connect()
-            self.win.toast("Found your Figma token, checking it…")
-
-            def check():
-                handle = figma.whoami(token)
+            # Saved locally only. No test request: checks like Figma's /me need
+            # extra token permissions, and every request counts toward Figma's
+            # monthly limit. The first Import shows whether the token works.
+            try:
                 figma.set_token(token)
-                return handle
-
-            def done(handle, err):
-                if err:
-                    return self.win.toast(str(err))
-                try:
-                    cb.set_content(None)  # don't leave the token on the clipboard
-                except Exception:  # noqa: BLE001
-                    pass
-                self.update_account()
-                self.win.toast(f"Connected to Figma as {handle}.")
-                then, self._then = self._then, None
-                if then:
-                    then()
-            self.win.in_background(check, done)
+            except core.VaultError as e:
+                return self.win.toast(str(e), "error")
+            try:
+                cb.set_content(None)  # don't leave the token on the clipboard
+            except Exception:  # noqa: BLE001
+                pass
+            self.update_account()
+            self.win.toast("Figma connected.", "success")
+            then, self._then = self._then, None
+            if then:
+                then()
         cb.read_text_async(None, got)
 
     def sign_out(self):
@@ -974,6 +970,8 @@ class MainWindow(Adw.ApplicationWindow):
         self.toast("Importing from Figma…")
 
         def finished(result, err):
+            if err:
+                self.figma.update_account()  # a refused token is forgotten
             if isinstance(err, figma.NeedsFrameChoice):
                 return self._pick_frame(err.frames)
             if isinstance(err, figma.NameTaken):
@@ -1050,6 +1048,8 @@ class MainWindow(Adw.ApplicationWindow):
         self.toast("Updating from Figma…")
 
         def finished(result, err):
+            if err:
+                self.figma.update_account()  # a refused token is forgotten
             if err:
                 return self.toast(err, "error")
             names, problems = result

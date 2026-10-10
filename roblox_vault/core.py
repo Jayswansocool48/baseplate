@@ -16,8 +16,8 @@ from pathlib import Path
 
 APP_ID = "io.github.jayswansocool48.RobloxVault"
 APP_NAME = "Roblox Vault"
-APP_VERSION = "1.0.0"
-LEGAL_VERSION = "2026-10-11"  # bump when legal docs change -> asks for consent again
+APP_VERSION = "1.0.1"
+LEGAL_VERSION = "2026-10-12"  # bump when legal docs change -> asks for consent again
 DEFAULT_PORT = 34872  # Rojo's default port
 
 SCRIPT_KINDS = {

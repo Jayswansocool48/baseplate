@@ -1,5 +1,5 @@
 REFUND POLICY
-Version 2026-10-11
+Version 2026-10-12
 
 Roblox Vault is free. There is nothing to buy, no subscription and no in-app
 purchases, so there is nothing to refund.

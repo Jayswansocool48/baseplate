@@ -1,5 +1,5 @@
 ACCESSIBILITY
-Version 2026-10-11
+Version 2026-10-12
 
 - Keyboard: every action has a shortcut or is reachable with Tab, arrow keys,
   Enter and F10 (menu). See Main menu -> Keyboard shortcuts.

@@ -55,6 +55,11 @@
     <color type="primary" scheme_preference="dark">#22325c</color>
   </branding>
   <releases>
+    <release version="1.0.1" date="2026-10-10">
+      <description>
+        <p>Fixes "Figma said no" when connecting Figma. Connecting no longer sends a test request, and Figma errors now say what went wrong.</p>
+      </description>
+    </release>
     <release version="1.0.0" date="2026-10-09">
       <description>
         <p>First release.</p>

@@ -1,5 +1,5 @@
 TERMS OF SERVICE
-Version 2026-10-11
+Version 2026-10-12
 
 1. The app. Roblox Vault is free software that stores Roblox scripts and GUIs on
 your computer and syncs them with Roblox Studio through Rojo.
