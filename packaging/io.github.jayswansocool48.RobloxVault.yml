@@ -1,0 +1,46 @@
+# Flatpak manifest for Roblox Vault.
+# Build locally:  packaging/build.sh      Published by: .github/workflows/flatpak.yml
+id: io.github.jayswansocool48.RobloxVault
+runtime: org.gnome.Platform
+runtime-version: '50'
+sdk: org.gnome.Sdk
+command: roblox-vault
+
+finish-args:
+  - --share=ipc
+  - --socket=wayland
+  - --socket=fallback-x11
+  - --device=dri                 # WebKit (Figma tab) drawing
+  - --share=network              # Figma tab + Figma API; Rojo talks to Studio on localhost
+  - --socket=pulseaudio          # sound effects
+  - --filesystem=xdg-data/roblox-vault:ro   # read projects from the older zip version once
+  - --talk-name=org.freedesktop.Flatpak     # Uninstall button removes the app itself
+
+cleanup:
+  - /include
+  - '*.a'
+
+modules:
+  # Rojo (Studio sync). rojo.json is written by packaging/pin-rojo.py.
+  - rojo.json
+
+  - name: roblox-vault
+    buildsystem: simple
+    build-commands:
+      - install -d /app/share/roblox-vault
+      - cp -r roblox_vault /app/share/roblox-vault/
+      - find /app/share/roblox-vault -name '__pycache__' -prune -exec rm -rf {} +
+      - install -Dm755 packaging/roblox-vault.sh /app/bin/roblox-vault
+      - install -Dm644 data/${FLATPAK_ID}.desktop /app/share/applications/${FLATPAK_ID}.desktop
+      - install -Dm644 data/${FLATPAK_ID}.metainfo.xml /app/share/metainfo/${FLATPAK_ID}.metainfo.xml
+      - install -Dm644 data/icons/hicolor/scalable/apps/${FLATPAK_ID}.svg /app/share/icons/hicolor/scalable/apps/${FLATPAK_ID}.svg
+      - install -Dm644 LICENSE /app/share/licenses/${FLATPAK_ID}/LICENSE
+    sources:
+      - type: dir
+        path: ..
+        skip:
+          - .git
+          - .flatpak-builder
+          - build
+          - site
+          - tests

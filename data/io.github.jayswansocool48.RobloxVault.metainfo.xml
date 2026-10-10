@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Copyright 2026 Jayswansocool48 -->
+<component type="desktop-application">
+  <id>io.github.jayswansocool48.RobloxVault</id>
+  <name>Roblox Vault</name>
+  <summary>Store, design, preview and sync your Roblox systems</summary>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>MIT</project_license>
+  <developer id="io.github.jayswansocool48">
+    <name>Jayswansocool48</name>
+  </developer>
+  <description>
+    <p>
+      Roblox Vault keeps each of your Roblox systems (an inventory, a shop, a
+      quest log) as its own project with server, client and shared scripts,
+      GUIs and notes, and live-syncs them into Roblox Studio with Rojo.
+    </p>
+    <ul>
+      <li>Code editor with Luau highlighting</li>
+      <li>GUI preview on desktop, laptop, tablet and phone screen sizes</li>
+      <li>Figma tab: design a frame, import it as a Roblox ScreenGui, update it later</li>
+      <li>Live sync to Roblox Studio, or build a place file</li>
+      <li>No account, no ads, no tracking; everything stays on your computer</li>
+    </ul>
+    <p>
+      Not affiliated with or endorsed by Roblox Corporation or Figma, Inc.
+    </p>
+  </description>
+  <launchable type="desktop-id">io.github.jayswansocool48.RobloxVault.desktop</launchable>
+  <provides>
+    <binary>roblox-vault</binary>
+  </provides>
+  <url type="homepage">https://github.com/Jayswansocool48/roblox-vault</url>
+  <url type="bugtracker">https://github.com/Jayswansocool48/roblox-vault/issues</url>
+  <url type="vcs-browser">https://github.com/Jayswansocool48/roblox-vault</url>
+  <categories>
+    <category>Development</category>
+  </categories>
+  <keywords>
+    <keyword>Roblox</keyword>
+    <keyword>Luau</keyword>
+    <keyword>Rojo</keyword>
+    <keyword>Figma</keyword>
+  </keywords>
+  <requires>
+    <display_length compare="ge">768</display_length>
+  </requires>
+  <supports>
+    <control>keyboard</control>
+    <control>pointing</control>
+  </supports>
+  <content_rating type="oars-1.1"/>
+  <branding>
+    <color type="primary" scheme_preference="light">#b9c4d6</color>
+    <color type="primary" scheme_preference="dark">#22325c</color>
+  </branding>
+  <releases>
+    <release version="1.0.0" date="2026-10-09">
+      <description>
+        <p>First release.</p>
+        <ul>
+          <li>Projects with scripts, GUIs and notes, synced to Studio with Rojo</li>
+          <li>Figma tab with one-click GUI import and updates</li>
+          <li>GUI preview at four screen sizes</li>
+          <li>Sound effects (can be turned off)</li>
+          <li>Uninstall button that removes the app and all its data</li>
+        </ul>
+      </description>
+    </release>
+  </releases>
+</component>

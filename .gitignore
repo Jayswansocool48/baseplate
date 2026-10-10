@@ -1,0 +1,44 @@
+# Build output
+build/
+dist/
+out/
+bin/
+obj/
+*.o
+*.so
+*.exe
+*.deb
+
+# Dependencies
+node_modules/
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+
+# Engine caches
+[Ll]ibrary/
+[Tt]emp/
+Intermediate/
+DerivedDataCache/
+Saved/
+.godot/
+
+# Editors and OS
+.vscode/
+.idea/
+*.swp
+.DS_Store
+
+# Secrets
+.env
+.env.*
+!.env.example
+*.key
+
+# Flatpak builds
+.flatpak-builder/
+site/
+repo/
+packaging/rojo.json
+*.flatpak
