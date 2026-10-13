@@ -1,4 +1,4 @@
-"""Roblox Vault core: storage, projects, scripts, GUIs and Rojo sync.
+"""Baseplate core: storage, projects, scripts, GUIs and Rojo sync.
 
 No GTK imports here, so this module can be tested headless.
 Everything is stored locally. Nothing is ever sent over the network.
@@ -14,10 +14,10 @@ import threading
 from datetime import datetime, timezone
 from pathlib import Path
 
-APP_ID = "io.github.jayswansocool48.RobloxVault"
-APP_NAME = "Roblox Vault"
-APP_VERSION = "1.0.1"
-LEGAL_VERSION = "2026-10-12"  # bump when legal docs change -> asks for consent again
+APP_ID = "io.github.jayswansocool48.Baseplate"
+APP_NAME = "Baseplate"
+APP_VERSION = "2.0.0"
+LEGAL_VERSION = "2026-10-13"  # bump when legal docs change -> asks for consent again
 DEFAULT_PORT = 34872  # Rojo's default port
 
 SCRIPT_KINDS = {
@@ -48,7 +48,7 @@ IN_FLATPAK = Path("/.flatpak-info").exists()
 EDITABLE_SUFFIXES = (".luau", ".lua", ".json", ".txt", ".toml", ".md")
 
 
-class VaultError(Exception):
+class BaseplateError(Exception):
     """A problem worth showing to the user as-is."""
 
 
@@ -56,12 +56,12 @@ class VaultError(Exception):
 
 def data_dir() -> Path:
     base = os.environ.get("XDG_DATA_HOME") or os.path.expanduser("~/.local/share")
-    return Path(base) / "roblox-vault"
+    return Path(base) / "baseplate"
 
 
 def config_dir() -> Path:
     base = os.environ.get("XDG_CONFIG_HOME") or os.path.expanduser("~/.config")
-    return Path(base) / "roblox-vault"
+    return Path(base) / "baseplate"
 
 
 def projects_dir() -> Path:
@@ -73,11 +73,11 @@ def projects_dir() -> Path:
 def validate_name(name: str) -> str:
     name = (name or "").strip()
     if not NAME_RE.match(name):
-        raise VaultError(
+        raise BaseplateError(
             "Names can use letters, numbers, spaces, - and _ (max 64 characters)."
         )
     if VERSION_SUFFIX_RE.search(name):
-        raise VaultError(
+        raise BaseplateError(
             f'"{name}" ends in a version or status tag. Use one clean name, like '
             f'"{strip_version_suffix(name) or "Inventory"}", and change the existing one instead.'
         )
@@ -97,7 +97,7 @@ def _inside(root: Path, target: Path) -> Path:
     root = root.resolve()
     target = target.resolve()
     if target != root and root not in target.parents:
-        raise VaultError("That path is outside the project.")
+        raise BaseplateError("That path is outside the project.")
     return target
 
 
@@ -164,7 +164,7 @@ def list_projects() -> list[str]:
 def create_project(name: str) -> Path:
     path = project_path(name)
     if path.exists():
-        raise VaultError(f'A project called "{name}" already exists.')
+        raise BaseplateError(f'A project called "{name}" already exists.')
     for folder in FOLDERS:
         (path / "src" / folder).mkdir(parents=True)
     (path / "notes.md").write_text(f"# {name}\n\nWhat this system does:\n")
@@ -232,7 +232,7 @@ def write_file(name: str, rel: str, text: str):
 
 def delete_file(name: str, rel: str):
     if rel == "notes.md":
-        raise VaultError("Notes can't be deleted, but you can clear them.")
+        raise BaseplateError("Notes can't be deleted, but you can clear them.")
     _inside(project_path(name), project_path(name) / rel).unlink()
     if rel.startswith("src/gui/"):
         write_project_file(name)
@@ -252,14 +252,14 @@ SCRIPT_TEMPLATES = {
 
 def create_script(project: str, folder: str, name: str, kind: str) -> str:
     if folder not in ("server", "client", "shared"):
-        raise VaultError("Pick server, client or shared.")
+        raise BaseplateError("Pick server, client or shared.")
     if kind not in SCRIPT_KINDS:
-        raise VaultError("Unknown script type.")
+        raise BaseplateError("Unknown script type.")
     name = validate_name(name)
     rel = f"src/{folder}/{name}{SCRIPT_KINDS[kind]}"
     target = project_path(project) / rel
     if target.exists():
-        raise VaultError(f'"{name}" already exists there.')
+        raise BaseplateError(f'"{name}" already exists there.')
     ident = re.sub(r"\W", "_", name) or "Module"
     target.write_text(SCRIPT_TEMPLATES[kind].format(name=name, ident=ident))
     return rel
@@ -302,7 +302,7 @@ def create_gui(project: str, name: str) -> str:
     rel = f"src/gui/{name}.model.json"
     target = project_path(project) / rel
     if target.exists():
-        raise VaultError(f'A GUI called "{name}" already exists.')
+        raise BaseplateError(f'A GUI called "{name}" already exists.')
     target.write_text(json.dumps(gui_template(name), indent=2) + "\n")
     write_project_file(project)
     return rel
@@ -324,14 +324,14 @@ def find_rojo() -> str | None:
 def rojo_build(project: str, out_file: str) -> str:
     rojo = find_rojo()
     if not rojo:
-        raise VaultError("Rojo isn't installed. See Help → Setting up sync.")
+        raise BaseplateError("Rojo isn't installed. See Help → Setting up sync.")
     write_project_file(project)
     if not out_file.endswith((".rbxm", ".rbxmx", ".rbxl", ".rbxlx")):
         out_file += ".rbxl"
     r = subprocess.run([rojo, "build", "--output", out_file],
                        cwd=project_path(project), capture_output=True, text=True)
     if r.returncode != 0:
-        raise VaultError(r.stderr.strip() or "Rojo build failed.")
+        raise BaseplateError(r.stderr.strip() or "Rojo build failed.")
     return out_file
 
 
@@ -349,10 +349,10 @@ class RojoServer:
 
     def start(self, project: str, port: int):
         if self.running:
-            raise VaultError(f'Already syncing "{self.project}". Stop it first.')
+            raise BaseplateError(f'Already syncing "{self.project}". Stop it first.')
         rojo = find_rojo()
         if not rojo:
-            raise VaultError("Rojo isn't installed. See Help → Setting up sync.")
+            raise BaseplateError("Rojo isn't installed. See Help → Setting up sync.")
         write_project_file(project)
         # --address localhost: only this computer can connect.
         self.proc = subprocess.Popen(
@@ -383,7 +383,7 @@ class RojoServer:
 
 def cache_dir() -> Path:
     base = os.environ.get("XDG_CACHE_HOME") or os.path.expanduser("~/.cache")
-    return Path(base) / "roblox-vault"
+    return Path(base) / "baseplate"
 
 
 def delete_all_data():
@@ -395,13 +395,20 @@ def delete_all_data():
 
 # ---------------------------------------------------------------- legacy install
 
-# Where the earlier zip version (install.sh) put things, relative to $HOME.
+# Earlier versions of this app, before it was renamed Baseplate.
+OLD_APP_ID = "io.github.jayswansocool48.RobloxVault"   # Flatpak "Roblox Vault"
+# Where the zip version (install.sh) put things, relative to $HOME.
 LEGACY_FILES = [
     ".local/share/roblox-vault-app",
     ".local/bin/roblox-vault",
     ".local/share/applications/io.github.robloxvault.RobloxVault.desktop",
 ]
 LEGACY_DATA = [".local/share/roblox-vault", ".config/roblox-vault"]
+# Project folders of earlier versions, newest first, relative to $HOME.
+LEGACY_PROJECTS = [
+    f".var/app/{OLD_APP_ID}/data/roblox-vault/projects",
+    ".local/share/roblox-vault/projects",
+]
 
 
 def host_home() -> Path:
@@ -409,24 +416,54 @@ def host_home() -> Path:
     return Path(os.environ.get("HOME") or os.path.expanduser("~"))
 
 
-def migrate_legacy_projects() -> int:
-    """Copy projects from the zip version into this install, once.
-    Returns how many projects were copied. Never deletes the originals."""
-    if not IN_FLATPAK:
-        return 0  # same folder; nothing to move
-    old = host_home() / ".local/share/roblox-vault/projects"
+def migrate_legacy_projects(home: Path | None = None) -> int:
+    """Copy projects from Roblox Vault (Flatpak or zip version) into
+    Baseplate, once. Returns how many were copied. Never touches the originals."""
+    home = home or host_home()
     marker = config_dir() / "migrated"
-    if marker.exists() or not old.is_dir():
+    if marker.exists():
         return 0
     copied = 0
-    for p in sorted(old.iterdir()):
-        target = projects_dir() / p.name
-        if p.is_dir() and (p / "default.project.json").exists() and not target.exists():
-            shutil.copytree(p, target)
-            copied += 1
+    for rel in LEGACY_PROJECTS:
+        old = home / rel
+        if not old.is_dir():
+            continue
+        for p in sorted(old.iterdir()):
+            target = projects_dir() / p.name
+            if p.is_dir() and (p / "default.project.json").exists() and not target.exists():
+                shutil.copytree(p, target)
+                copied += 1
     marker.parent.mkdir(parents=True, exist_ok=True)
     marker.write_text("done\n")
     return copied
+
+
+def _host(cmd: list[str], **kw):
+    """Run a command on the host (through Flatpak when sandboxed)."""
+    if IN_FLATPAK:
+        cmd = ["flatpak-spawn", "--host", *cmd]
+    return subprocess.run(cmd, capture_output=True, text=True, **kw)
+
+
+def old_app_installed() -> bool:
+    """Is the Roblox Vault Flatpak still installed?"""
+    if not can_reach_host() or not shutil.which("flatpak-spawn" if IN_FLATPAK else "flatpak"):
+        return False
+    try:
+        return _host(["flatpak", "info", OLD_APP_ID], timeout=10).returncode == 0
+    except (OSError, subprocess.TimeoutExpired):
+        return False
+
+
+def remove_old_app() -> bool:
+    """Uninstall Roblox Vault and its data (its projects were copied first)."""
+    try:
+        r = _host(["sh", "-c", f"flatpak uninstall --user -y --delete-data {OLD_APP_ID} "
+                               f"|| flatpak uninstall --system -y --delete-data {OLD_APP_ID}"],
+                  timeout=120)
+    except (OSError, subprocess.TimeoutExpired):
+        return False
+    return r.returncode == 0
 
 
 # ---------------------------------------------------------------- uninstall
@@ -437,6 +474,11 @@ def uninstall_commands(home: Path | None = None) -> list[list[str]]:
     home = home or host_home()
     legacy = [str(home / p) for p in LEGACY_FILES + LEGACY_DATA]
     cmds = [["rm", "-rf", "--", *legacy]]
+    if IN_FLATPAK or shutil.which("flatpak"):
+        # Roblox Vault, the app's earlier name, if it's still around
+        cmds.append(["sh", "-c", f"flatpak uninstall --user -y --delete-data {OLD_APP_ID} "
+                                 f"|| flatpak uninstall --system -y --delete-data {OLD_APP_ID} "
+                                 f"|| true"])
     if IN_FLATPAK:
         # Remove from whichever installation has it (user first, then system).
         cmds.append(["sh", "-c",

@@ -16,7 +16,7 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  APP_ID: io.github.jayswansocool48.RobloxVault
+  APP_ID: io.github.jayswansocool48.Baseplate
 
 jobs:
   build:
@@ -83,10 +83,10 @@ jobs:
             || report "flatpak-builder failed"
           tail -n 5 "$RUNNER_TEMP/build.log"
           flatpak build-update-repo "${SIGN[@]}" --generate-static-deltas --prune \
-            --title="Roblox Vault" --default-branch=stable site/repo > "$RUNNER_TEMP/build.log" 2>&1 \
+            --title="Baseplate" --default-branch=stable site/repo > "$RUNNER_TEMP/build.log" 2>&1 \
             || report "build-update-repo failed"
           flatpak build-bundle --runtime-repo=https://dl.flathub.org/repo/flathub.flatpakrepo \
-            site/repo site/RobloxVault.flatpak "$APP_ID" stable > "$RUNNER_TEMP/build.log" 2>&1 \
+            site/repo site/Baseplate.flatpak "$APP_ID" stable > "$RUNNER_TEMP/build.log" 2>&1 \
             || report "build-bundle failed"
 
       - name: Write install page
@@ -97,8 +97,8 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: RobloxVault.flatpak
-          path: site/RobloxVault.flatpak
+          name: Baseplate.flatpak
+          path: site/Baseplate.flatpak
 
       - uses: actions/upload-pages-artifact@v3
         if: steps.key.outputs.publish == 'true'

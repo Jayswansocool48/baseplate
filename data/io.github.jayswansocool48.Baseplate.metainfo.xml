@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!-- Copyright 2026 Jayswansocool48 -->
 <component type="desktop-application">
-  <id>io.github.jayswansocool48.RobloxVault</id>
-  <name>Roblox Vault</name>
-  <summary>Store, design, preview and sync your Roblox systems</summary>
+  <id>io.github.jayswansocool48.Baseplate</id>
+  <name>Baseplate</name>
+  <summary>Build, design and sync Roblox systems, with an AI assistant</summary>
   <metadata_license>CC0-1.0</metadata_license>
   <project_license>MIT</project_license>
   <developer id="io.github.jayswansocool48">
@@ -11,28 +11,34 @@
   </developer>
   <description>
     <p>
-      Roblox Vault keeps each of your Roblox systems (an inventory, a shop, a
-      quest log) as its own project with server, client and shared scripts,
-      GUIs and notes, and live-syncs them into Roblox Studio with Rojo.
+      Baseplate is a dark studio for building Roblox systems (an inventory, a
+      shop, a quest log). Each system is its own project with server, client and
+      shared scripts, GUIs and notes, and it live-syncs into Roblox Studio with Rojo.
     </p>
     <ul>
+      <li>AI assistant: Claude, ChatGPT (your own API key) or Ollama (free, on your computer)</li>
+      <li>Apply the assistant's code to a file, insert it, or save it as a new script</li>
       <li>Code editor with Luau highlighting</li>
       <li>GUI preview on desktop, laptop, tablet and phone screen sizes</li>
       <li>Figma tab: design a frame, import it as a Roblox ScreenGui, update it later</li>
       <li>Live sync to Roblox Studio, or build a place file</li>
-      <li>No account, no ads, no tracking; everything stays on your computer</li>
+      <li>No account, no ads, no tracking</li>
     </ul>
     <p>
-      Not affiliated with or endorsed by Roblox Corporation or Figma, Inc.
+      Not affiliated with or endorsed by Roblox Corporation, Figma, Inc.,
+      Anthropic or OpenAI.
     </p>
   </description>
-  <launchable type="desktop-id">io.github.jayswansocool48.RobloxVault.desktop</launchable>
+  <replaces>
+    <id>io.github.jayswansocool48.RobloxVault</id>
+  </replaces>
+  <launchable type="desktop-id">io.github.jayswansocool48.Baseplate.desktop</launchable>
   <provides>
-    <binary>roblox-vault</binary>
+    <binary>baseplate</binary>
   </provides>
-  <url type="homepage">https://github.com/Jayswansocool48/roblox-vault</url>
-  <url type="bugtracker">https://github.com/Jayswansocool48/roblox-vault/issues</url>
-  <url type="vcs-browser">https://github.com/Jayswansocool48/roblox-vault</url>
+  <url type="homepage">https://github.com/Jayswansocool48/baseplate</url>
+  <url type="bugtracker">https://github.com/Jayswansocool48/baseplate/issues</url>
+  <url type="vcs-browser">https://github.com/Jayswansocool48/baseplate</url>
   <categories>
     <category>Development</category>
   </categories>
@@ -41,6 +47,10 @@
     <keyword>Luau</keyword>
     <keyword>Rojo</keyword>
     <keyword>Figma</keyword>
+    <keyword>AI</keyword>
+    <keyword>Claude</keyword>
+    <keyword>ChatGPT</keyword>
+    <keyword>Ollama</keyword>
   </keywords>
   <requires>
     <display_length compare="ge">768</display_length>
@@ -51,10 +61,20 @@
   </supports>
   <content_rating type="oars-1.1"/>
   <branding>
-    <color type="primary" scheme_preference="light">#b9c4d6</color>
-    <color type="primary" scheme_preference="dark">#22325c</color>
+    <color type="primary" scheme_preference="light">#3ddc97</color>
+    <color type="primary" scheme_preference="dark">#111316</color>
   </branding>
   <releases>
+    <release version="2.0.0" date="2026-10-13">
+      <description>
+        <p>Roblox Vault is now Baseplate: new name, new icon and a dark studio redesign.</p>
+        <ul>
+          <li>AI assistant docked on the right: Claude, ChatGPT or Ollama</li>
+          <li>Systems and files sidebar with grouped files, status bar and log panel</li>
+          <li>Projects from Roblox Vault are copied in on first start</li>
+        </ul>
+      </description>
+    </release>
     <release version="1.0.1" date="2026-10-10">
       <description>
         <p>Fixes "Figma said no" when connecting Figma. Connecting no longer sends a test request, and Figma errors now say what went wrong.</p>

@@ -5,7 +5,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from roblox_vault import core, figma
+from baseplate import core, figma
 
 # Shaped like GET /v1/files/:key/nodes -> nodes[id].document
 FRAME = {
@@ -114,7 +114,7 @@ class FigmaTests(unittest.TestCase):
             figma.import_from_tab("Inv", other, False, _fetch=fake_fetch)
         taken = cm.exception
         before = len(calls)
-        with self.assertRaises(core.VaultError):  # version tags are refused
+        with self.assertRaises(core.BaseplateError):  # version tags are refused
             figma.import_frame_as("Inv", "InventoryV2", taken.frame, taken.key,
                                   taken.node_id, False)
         name3, _, _ = figma.import_frame_as("Inv", "InventoryShop", taken.frame,
@@ -134,7 +134,7 @@ class FigmaTests(unittest.TestCase):
             figma.import_from_tab("Inv", "https://www.figma.com/design/KEY/UI", False,
                                   _fetch=lambda k, i: {}, _frames=lambda k: frames)
         self.assertEqual(cm.exception.frames, frames)
-        with self.assertRaises(core.VaultError):
+        with self.assertRaises(core.BaseplateError):
             figma.import_from_tab("Inv", "https://www.figma.com/files/recents", False)
 
     def test_token_private_and_deleted(self):
@@ -142,7 +142,7 @@ class FigmaTests(unittest.TestCase):
         tok = "figd_" + "x" * 30
         figma.set_token(tok)
         self.assertEqual(figma.get_token(), tok)
-        with self.assertRaises(core.VaultError):
+        with self.assertRaises(core.BaseplateError):
             figma.set_token("not a token")
         self.assertEqual(stat.S_IMODE(figma.token_path().stat().st_mode), 0o600)
         core.delete_all_data()
@@ -159,20 +159,20 @@ class FigmaTests(unittest.TestCase):
                 raise urllib.error.HTTPError("u", 403, "Forbidden", {}, io.BytesIO(body))
             return fake
         with mock.patch("urllib.request.urlopen", refuse(b'{"status":403,"err":"Invalid token"}')):
-            with self.assertRaises(core.VaultError) as cm:
+            with self.assertRaises(core.BaseplateError) as cm:
                 figma.fetch_nodes("KEY", ["1:2"])
         self.assertIn("Invalid token", str(cm.exception))
         self.assertIsNone(figma.get_token(), "a rejected token must be deleted")
         # a permission problem on one file keeps the token
         figma.set_token("figd_" + "x" * 30)
         with mock.patch("urllib.request.urlopen", refuse(b'{"err":"Forbidden"}')):
-            with self.assertRaises(core.VaultError) as cm:
+            with self.assertRaises(core.BaseplateError) as cm:
                 figma.fetch_nodes("KEY", ["1:2"])
         self.assertIn("File content", str(cm.exception))
         self.assertIsNotNone(figma.get_token())
 
     def test_no_token_means_no_network(self):
-        with self.assertRaises(core.VaultError):
+        with self.assertRaises(core.BaseplateError):
             figma.fetch_nodes("KEY", ["1:2"])
 
 

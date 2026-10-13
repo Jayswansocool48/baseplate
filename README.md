@@ -1,18 +1,22 @@
-# Roblox Vault
+# Baseplate
 
-A Pop!_OS app for keeping your Roblox systems (scripts, GUIs, notes) in one
-place, designing GUIs in Figma, previewing them, and live-syncing everything
-into Roblox Studio with Rojo.
+A dark studio for Pop!_OS where each of your Roblox systems (inventory, shop,
+quests…) lives as its own project: scripts, GUIs and notes. Design GUIs in Figma,
+preview them, ask the AI assistant for help, and live-sync everything into
+Roblox Studio with Rojo.
 
-![Roblox Vault icon](data/icons/hicolor/scalable/apps/io.github.jayswansocool48.RobloxVault.svg)
+Baseplate was called Roblox Vault. Your systems are copied over on first start,
+and the app offers to remove the old version.
+
+![Baseplate icon](data/icons/hicolor/scalable/apps/io.github.jayswansocool48.Baseplate.svg)
 
 ## Install
 
 ```bash
-flatpak install --user https://jayswansocool48.github.io/roblox-vault/roblox-vault.flatpakref
+flatpak install --user https://jayswansocool48.github.io/baseplate/baseplate.flatpakref
 ```
 
-Then open **Roblox Vault** from the app launcher. The icon stays in your
+Then open **Baseplate** from the app launcher. The icon stays in your
 Applications like any other app.
 
 ## Update
@@ -22,12 +26,12 @@ From a terminal: `flatpak update`.
 
 ## Uninstall
 
-In the app: **Menu → Uninstall Roblox Vault…**. It removes the app, its icon
-and all of its data, including files from the older zip version. You can also
+In the app: **Menu → Uninstall Baseplate…**. It removes the app, its icon
+and all of its data, including Roblox Vault and the older zip version. You can also
 uninstall it from the COSMIC Store, or run:
 
 ```bash
-flatpak uninstall --user --delete-data io.github.jayswansocool48.RobloxVault
+flatpak uninstall --user --delete-data io.github.jayswansocool48.Baseplate
 ```
 
 ## Sync with Roblox Studio
@@ -36,10 +40,30 @@ Rojo is built into the app.
 
 1. Install **Vinegar** from the COSMIC Store to run Roblox Studio on Linux.
 2. In Studio, get the **Rojo** plugin from the Creator Store.
-3. In Roblox Vault, pick a project and press **Sync** (Ctrl+R). In Studio:
+3. In Baseplate, pick a system and press **Sync** (Ctrl+R). In Studio:
    **Plugins → Rojo → Connect**. Every save now shows up in Studio.
 
 Don't want live sync? **Build** (Ctrl+B) writes a `.rbxl` place file you can open in Studio.
+
+## AI assistant
+
+Press **Assistant** (Ctrl+J) to open the chat on the right. Pick who answers in
+**Assistant settings** (the gear):
+
+| Assistant | Cost | Your code goes to |
+|---|---|---|
+| **Ollama** | Free | Nowhere; it runs on your computer. Install from [ollama.com](https://ollama.com), then `ollama pull qwen2.5-coder` |
+| **Claude** | Pay per use on your Anthropic API account | Anthropic |
+| **ChatGPT** | Pay per use on your OpenAI API account | OpenAI |
+
+A Claude.ai or ChatGPT Plus subscription doesn't include API use; get an API key
+from the link in settings. Keys are stored only on your computer.
+
+Under **Share** you choose what the assistant sees: the open file, and/or the
+system's file names and notes. Code in replies has buttons to **Apply to file**
+(Ctrl+Z undoes it), **Insert** at the cursor, save as a **New script…**, or
+**Copy**. The assistant follows your naming rules: no `V2`, `_New` or `_Final`
+names.
 
 ## The three tabs
 
@@ -110,7 +134,7 @@ Short sounds play for saves, imports, sync, deletes and errors. Turn them off wi
 
 ```bash
 python3 -m unittest discover -t . -s tests   # tests
-python3 -m roblox_vault                      # run from source (needs the GTK packages)
+python3 -m baseplate                      # run from source (needs the GTK packages)
 ./packaging/build.sh                         # build and install the Flatpak locally
 ```
 
@@ -135,7 +159,7 @@ Every push to `main` is tested, built and published by
 
 ## Legal
 
-Privacy policy, terms and the other policies are in `roblox_vault/legal/` and inside
+Privacy policy, terms and the other policies are in `baseplate/legal/` and inside
 the app (Menu → Legal & privacy). See [COMPLIANCE.md](COMPLIANCE.md) for the
 20-item checklist. MIT License.
 

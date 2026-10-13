@@ -32,7 +32,7 @@ SHAPE_TYPES = {"RECTANGLE", "ELLIPSE", "VECTOR", "LINE", "STAR",
                "REGULAR_POLYGON", "BOOLEAN_OPERATION"}
 
 
-class NameTaken(core.VaultError):
+class NameTaken(core.BaseplateError):
     """A different GUI already uses this frame's name. Carries the fetched
     frame so the import can finish under a new name without another request."""
 
@@ -41,7 +41,7 @@ class NameTaken(core.VaultError):
         self.name, self.frame, self.key, self.node_id = name, frame, key, node_id
 
 
-class NeedsFrameChoice(core.VaultError):
+class NeedsFrameChoice(core.BaseplateError):
     """The Figma tab has a file open but no frame selected."""
 
     def __init__(self, file_key: str, frames: list):
@@ -76,7 +76,7 @@ def find_token(text: str | None) -> str | None:
 def set_token(token: str):
     token = (token or "").strip()
     if not TOKEN_RE.fullmatch(token):
-        raise core.VaultError("That doesn't look like a Figma token.")
+        raise core.BaseplateError("That doesn't look like a Figma token.")
     p = token_path()
     p.parent.mkdir(parents=True, exist_ok=True)
     fd = os.open(p, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
@@ -116,16 +116,16 @@ def parse_url(url: str) -> tuple[str | None, str | None]:
 def _get(path: str, params: dict | None = None, token: str | None = None) -> dict:
     token = token or get_token()
     if not token:
-        raise core.VaultError("Connect Figma first.")
+        raise core.BaseplateError("Connect Figma first.")
     url = API + path + ("?" + urllib.parse.urlencode(params) if params else "")
     req = urllib.request.Request(url, headers={"X-Figma-Token": token})
     try:
         with urllib.request.urlopen(req, timeout=20) as r:
             return json.load(r)
     except urllib.error.HTTPError as e:
-        raise core.VaultError(_explain(e.code, _figma_reason(e)))
+        raise core.BaseplateError(_explain(e.code, _figma_reason(e)))
     except (urllib.error.URLError, TimeoutError):
-        raise core.VaultError("Couldn't reach Figma. Check your internet connection.")
+        raise core.BaseplateError("Couldn't reach Figma. Check your internet connection.")
 
 
 def _figma_reason(e) -> str:
@@ -294,7 +294,7 @@ def convert_node(node, parent_box, scale, z, warnings):
 
 def to_screengui(frame, scale):
     if not frame or frame.get("type") not in CONTAINER_TYPES:
-        raise core.VaultError("Select a frame in Figma, not a single layer.")
+        raise core.BaseplateError("Select a frame in Figma, not a single layer.")
     warnings = []
     root = convert_node(frame, frame["absoluteBoundingBox"], scale, 1, warnings)
     rp = root["Properties"]
@@ -372,7 +372,7 @@ def import_from_tab(project, tab_url, scale, node_id=None, _fetch=fetch_nodes,
     no frame is selected, carrying the file's frames for a picker."""
     key, url_node = parse_url(tab_url)
     if not key:
-        raise core.VaultError("Open a design file in the Figma tab first.")
+        raise core.BaseplateError("Open a design file in the Figma tab first.")
     node_id = node_id or url_node
     frame = _fetch(key, [node_id]).get(node_id) if node_id else None
     if not frame or frame.get("type") not in CONTAINER_TYPES:
@@ -392,7 +392,7 @@ def refresh_all(project, _fetch=fetch_nodes):
     for key, items in by_file.items():
         try:
             nodes = _fetch(key, sorted({link["node"] for _n, link in items}))
-        except core.VaultError as e:
+        except core.BaseplateError as e:
             problems.append(str(e))
             continue
         for name, link in items:
@@ -405,7 +405,7 @@ def refresh_all(project, _fetch=fetch_nodes):
                                          link.get("scale", False))
                 done.append(name)
                 problems += warns
-            except core.VaultError as e:
+            except core.BaseplateError as e:
                 problems.append(f"{name}: {e}")
     return done, problems
 

@@ -1,4 +1,4 @@
-"""Roblox Vault GTK4 / libadwaita interface."""
+"""Baseplate GTK4 / libadwaita interface."""
 from __future__ import annotations
 
 import json
@@ -13,7 +13,7 @@ gi.require_version("Gdk", "4.0")
 gi.require_version("Adw", "1")
 gi.require_version("Pango", "1.0")
 gi.require_version("PangoCairo", "1.0")
-from gi.repository import Adw, Gdk, Gio, GLib, Gtk  # noqa: E402
+from gi.repository import Adw, Gdk, Gio, GLib, GObject, Gtk  # noqa: E402
 
 try:
     gi.require_version("GtkSource", "5")
@@ -27,8 +27,10 @@ try:
 except (ValueError, ImportError):
     WebKit = None
 
-from . import core, figma, preview  # noqa: E402
+from . import assistant, core, figma, preview  # noqa: E402
 from .sounds import Sounds  # noqa: E402
+from . import theme  # noqa: E402
+from .assistant_ui import AssistantPane  # noqa: E402
 
 LEGAL_DIR = Path(__file__).parent / "legal"
 BUSINESS_FILE = Path(__file__).parent / "business.json"
@@ -140,19 +142,24 @@ class ConsentWindow(Adw.Window):
     """First-run consent. Boxes start unticked; Quit is as easy as Continue."""
 
     def __init__(self, app, on_accept):
-        super().__init__(application=app, title="Welcome to Roblox Vault",
+        super().__init__(application=app, title="Welcome to Baseplate",
                          default_width=560, resizable=False)
         self.on_accept = on_accept
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12,
                       margin_top=24, margin_bottom=24, margin_start=24, margin_end=24)
-        title = Gtk.Label(label="Before you start", xalign=0)
-        title.add_css_class("title-2")
-        box.append(title)
+        brand = Gtk.Box(spacing=10)
+        brand.append(Gtk.Image(icon_name=core.APP_ID, pixel_size=48,
+                               accessible_role=Gtk.AccessibleRole.PRESENTATION))
+        title = Gtk.Label(label="Welcome to Baseplate", xalign=0)
+        title.add_css_class("title-1")
+        brand.append(title)
+        box.append(brand)
         box.append(Gtk.Label(wrap=True, xalign=0, label=(
-            "Roblox Vault stores your scripts and GUIs only on this computer. "
-            "It has no account, no ads, no tracking and no payments. The app "
-            "itself stays offline; only the optional Figma tab goes online, and "
-            "only after you open it. Rojo sync only listens on this computer.")))
+            "Baseplate stores your scripts and GUIs only on this computer. "
+            "It has no account, no ads, no tracking and no payments. It only goes "
+            "online when you use the optional Figma tab, or the assistant with "
+            "Claude or ChatGPT (with your own API key). The assistant can also run "
+            "on this computer with Ollama. Rojo sync only listens on this computer.")))
         self.checks = []
         for text, page in (("I have read and agree to the Terms of Service", "terms"),
                            ("I have read the Privacy Policy", "privacy"),
@@ -489,7 +496,7 @@ class FigmaPane(Gtk.Box):
             # monthly limit. The first Import shows whether the token works.
             try:
                 figma.set_token(token)
-            except core.VaultError as e:
+            except core.BaseplateError as e:
                 return self.win.toast(str(e), "error")
             try:
                 cb.set_content(None)  # don't leave the token on the clipboard
@@ -534,43 +541,83 @@ class MainWindow(Adw.ApplicationWindow):
             on_exit=lambda c: GLib.idle_add(self._rojo_exited, c))
 
         self.toasts = Adw.ToastOverlay()
-        header = Adw.HeaderBar()
 
-        def hbtn(icon, text, action):
+        def flat(icon, tip, action):
             b = Gtk.Button(icon_name=icon, action_name=action)
-            label(b, text)
+            b.add_css_class("flat")
+            label(b, tip)
             return b
 
-        header.pack_start(hbtn("folder-new-symbolic", "New project (Ctrl+Shift+N)", "win.new-project"))
-        header.pack_start(hbtn("document-new-symbolic", "New script (Ctrl+N)", "win.new-script"))
-        header.pack_start(hbtn("view-grid-symbolic", "New GUI (Ctrl+G)", "win.new-gui"))
-        header.pack_start(hbtn("document-save-symbolic", "Save (Ctrl+S)", "win.save"))
+        # ---- header: sidebar toggle | Code / Preview / Figma | sync, assistant, menu
+        header = Adw.HeaderBar()
+        self.sidebar_btn = Gtk.ToggleButton(icon_name="sidebar-show-symbolic", active=True)
+        label(self.sidebar_btn, "Show systems and files (F9)")
+        header.pack_start(self.sidebar_btn)
 
-        self.sync_btn = Gtk.ToggleButton(icon_name="emblem-synchronizing-symbolic")
+        self.sync_btn = Gtk.ToggleButton()
+        self.sync_btn.set_child(Adw.ButtonContent(icon_name="emblem-synchronizing-symbolic",
+                                                  label="Sync"))
         label(self.sync_btn, "Sync with Roblox Studio (Ctrl+R)")
         self.sync_btn.connect("toggled", self._toggle_sync)
+        self.ai_btn = Gtk.ToggleButton(active=bool(app.settings.get("ai_open", True)))
+        self.ai_btn.set_child(Adw.ButtonContent(icon_name="user-available-symbolic",
+                                                label="Assistant"))
+        label(self.ai_btn, "Show the AI assistant (Ctrl+J)")
         header.pack_end(self._menu_button())
-        header.pack_end(hbtn("document-send-symbolic", "Build place file (Ctrl+B)", "win.build"))
+        header.pack_end(self.ai_btn)
         header.pack_end(self.sync_btn)
-        header.pack_end(hbtn("view-refresh-symbolic", "Update GUIs from Figma (Ctrl+Shift+R)", "win.figma-refresh"))
 
-        # sidebar
+        # ---- left sidebar: brand, systems, files
         self.projects = Gtk.ListBox(selection_mode=Gtk.SelectionMode.SINGLE)
-        label(self.projects, "Projects")
+        self.projects.add_css_class("navigation-sidebar")
+        label(self.projects, "Systems (projects)")
         self.projects.connect("row-selected", self._project_selected)
         self.files = Gtk.ListBox(selection_mode=Gtk.SelectionMode.SINGLE)
-        label(self.files, "Files in project")
+        self.files.add_css_class("navigation-sidebar")
+        label(self.files, "Files in this system")
         self.files.connect("row-selected", self._file_selected)
-        side = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6,
-                       margin_top=6, margin_start=6, margin_end=6, margin_bottom=6)
-        for title, lst in (("Projects", self.projects), ("Files", self.files)):
-            h = Gtk.Label(label=title, xalign=0)
-            h.add_css_class("heading")
-            side.append(h)
-            side.append(Gtk.ScrolledWindow(child=lst, vexpand=True,
-                                           hscrollbar_policy=Gtk.PolicyType.NEVER))
+        self.files.set_header_func(self._file_header)
 
-        # code editor
+        side = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        side.add_css_class("bp-sidebar")
+        brand = Gtk.Box(spacing=8, margin_start=14, margin_top=12, margin_bottom=4)
+        brand.append(Gtk.Image(icon_name=core.APP_ID, pixel_size=28))
+        name = Gtk.Label(label="Baseplate", xalign=0)
+        name.add_css_class("bp-brand")
+        brand.append(name)
+        side.append(brand)
+
+        def section(title, tip, action):
+            row = Gtk.Box()
+            lbl = Gtk.Label(label=title.upper(), xalign=0, hexpand=True)
+            lbl.add_css_class("bp-section")
+            row.append(lbl)
+            add = flat("list-add-symbolic", tip, action)
+            add.set_valign(Gtk.Align.END)
+            add.set_margin_end(6)
+            row.append(add)
+            return row
+
+        side.append(section("Systems", "New system (Ctrl+Shift+N)", "win.new-project"))
+        side.append(Gtk.ScrolledWindow(child=self.projects, vexpand=True,
+                                       hscrollbar_policy=Gtk.PolicyType.NEVER))
+        files_head = Gtk.Box()
+        fl = Gtk.Label(label="FILES", xalign=0, hexpand=True)
+        fl.add_css_class("bp-section")
+        files_head.append(fl)
+        add_menu = Gio.Menu()
+        add_menu.append("New script", "win.new-script")
+        add_menu.append("New GUI", "win.new-gui")
+        add_btn = Gtk.MenuButton(icon_name="list-add-symbolic", menu_model=add_menu,
+                                 valign=Gtk.Align.END, margin_end=6)
+        add_btn.add_css_class("flat")
+        label(add_btn, "New script or GUI")
+        files_head.append(add_btn)
+        side.append(files_head)
+        side.append(Gtk.ScrolledWindow(child=self.files, vexpand=True,
+                                       hscrollbar_policy=Gtk.PolicyType.NEVER))
+
+        # ---- code editor
         if GtkSource:
             self.buffer = GtkSource.Buffer()
             self.buffer.set_language(GtkSource.LanguageManager.get_default().get_language("lua"))
@@ -579,18 +626,31 @@ class MainWindow(Adw.ApplicationWindow):
             self._scheme()
             self.editor = GtkSource.View(buffer=self.buffer, monospace=True,
                                          show_line_numbers=True, auto_indent=True,
-                                         tab_width=4, highlight_current_line=True)
+                                         tab_width=4, highlight_current_line=True,
+                                         left_margin=8, top_margin=6)
         else:
             self.buffer = Gtk.TextBuffer()
             self.editor = Gtk.TextView(buffer=self.buffer, monospace=True)
         label(self.editor, "Code editor")
         self.editor.set_sensitive(False)
         self.buffer.connect("changed", self._changed)
-        self.file_title = Gtk.Label(label="Pick or create a project", xalign=0,
-                                    margin_start=8, margin_top=4, margin_bottom=4)
-        self.file_title.add_css_class("dim-label")
 
-        # tabs: Code / Preview / Figma
+        # ---- path bar above the tabs: system / file, save, delete
+        pathbar = Gtk.Box(spacing=6)
+        pathbar.add_css_class("bp-pathbar")
+        self.path_dir = Gtk.Label(xalign=0)
+        self.path_dir.add_css_class("bp-path")
+        self.path_name = Gtk.Label(xalign=0, ellipsize=3)
+        self.path_name.add_css_class("bp-path-name")
+        self.file_title = Gtk.Label(label="", xalign=0, hexpand=True)  # unsaved marker
+        self.file_title.add_css_class("bp-dim")
+        pathbar.append(self.path_dir)
+        pathbar.append(self.path_name)
+        pathbar.append(self.file_title)
+        pathbar.append(flat("document-save-symbolic", "Save (Ctrl+S)", "win.save"))
+        pathbar.append(flat("user-trash-symbolic", "Delete this file", "win.delete-file"))
+
+        # ---- tabs: Code / Preview / Figma
         self.preview = PreviewPane(self._preview_clicked)
         self.figma = FigmaPane(self)
         self.pages = Adw.ViewStack(vexpand=True)
@@ -603,23 +663,60 @@ class MainWindow(Adw.ApplicationWindow):
         header.set_title_widget(Adw.ViewSwitcher(stack=self.pages,
                                                  policy=Adw.ViewSwitcherPolicy.WIDE))
 
-        # sync log
-        self.log_view = Gtk.TextView(editable=False, monospace=True, cursor_visible=False)
-        label(self.log_view, "Sync and Figma log")
-        log_scroll = Gtk.ScrolledWindow(child=self.log_view, min_content_height=90)
+        # ---- log (slides up from the status bar)
+        self.log_view = Gtk.TextView(editable=False, monospace=True, cursor_visible=False,
+                                     left_margin=10, top_margin=6)
+        self.log_view.add_css_class("bp-log")
+        label(self.log_view, "Sync, Figma and assistant log")
+        self.log_reveal = Gtk.Revealer(child=Gtk.ScrolledWindow(child=self.log_view,
+                                                                min_content_height=140))
 
-        right = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
-        right.append(self.file_title)
-        right.append(self.pages)
-        right.append(Gtk.Separator())
-        right.append(log_scroll)
+        center = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        center.append(pathbar)
+        center.append(self.pages)
+        center.append(self.log_reveal)
 
-        paned = Gtk.Paned(start_child=side, end_child=right, position=250,
-                          shrink_start_child=False)
-        tv = Adw.ToolbarView(content=paned)
+        # ---- assistant dock (right)
+        self.assistant = AssistantPane(self)
+        self.ai_split = Adw.OverlaySplitView(
+            content=center, sidebar=self.assistant, sidebar_position=Gtk.PackType.END,
+            min_sidebar_width=320, max_sidebar_width=520, sidebar_width_fraction=0.32,
+            show_sidebar=self.ai_btn.get_active())
+        self.ai_btn.bind_property("active", self.ai_split, "show-sidebar",
+                                  GObject.BindingFlags.BIDIRECTIONAL)
+        self.ai_split.connect("notify::show-sidebar", lambda *_: app.settings.set(
+            "ai_open", self.ai_split.get_show_sidebar()))
+
+        self.side_split = Adw.OverlaySplitView(content=self.ai_split, sidebar=side,
+                                               min_sidebar_width=220, max_sidebar_width=300)
+        self.sidebar_btn.bind_property("active", self.side_split, "show-sidebar",
+                                       GObject.BindingFlags.BIDIRECTIONAL |
+                                       GObject.BindingFlags.SYNC_CREATE)
+
+        # ---- status bar
+        status = Gtk.Box(spacing=8)
+        status.add_css_class("bp-statusbar")
+        self.sync_chip = Gtk.Label(label="Sync off")
+        self.sync_chip.add_css_class("bp-chip")
+        self.sync_chip.add_css_class("off")
+        self.ai_chip = Gtk.Label()
+        self.ai_chip.add_css_class("bp-chip")
+        status.append(self.sync_chip)
+        status.append(self.ai_chip)
+        status.append(Gtk.Box(hexpand=True))
+        self.log_btn = Gtk.ToggleButton(label="Log")
+        self.log_btn.add_css_class("flat")
+        label(self.log_btn, "Show the log (Ctrl+L)")
+        self.log_btn.bind_property("active", self.log_reveal, "reveal-child",
+                                   GObject.BindingFlags.SYNC_CREATE)
+        status.append(self.log_btn)
+
+        tv = Adw.ToolbarView(content=self.side_split)
         tv.add_top_bar(header)
+        tv.add_bottom_bar(status)
         self.toasts.set_child(tv)
         self.set_content(self.toasts)
+        self.update_status()
 
         self._actions()
         self.connect("close-request", self._on_close)
@@ -630,9 +727,17 @@ class MainWindow(Adw.ApplicationWindow):
         menu = Gio.Menu()
         sec = Gio.Menu()
         sec.append("Delete current file", "win.delete-file")
-        sec.append("Delete current project", "win.delete-project")
+        sec.append("Delete current system", "win.delete-project")
         sec.append("Open project folder", "win.open-folder")
         menu.append_section(None, sec)
+        ai = Gio.Menu()
+        ai.append("Show assistant", "win.assistant")
+        ai.append("Assistant settings…", "win.assistant-settings")
+        menu.append_section("Assistant", ai)
+        tools = Gio.Menu()
+        tools.append("Build place file…", "win.build")
+        tools.append("Update GUIs from Figma", "win.figma-refresh")
+        menu.append_section(None, tools)
         fig = Gio.Menu()
         fig.append("Import selected Figma frame", "win.figma-import")
         fig.append("Update GUIs from Figma", "win.figma-refresh")
@@ -644,11 +749,11 @@ class MainWindow(Adw.ApplicationWindow):
         sec2.append("Keyboard shortcuts", "win.shortcuts")
         sec2.append("Legal & privacy", "win.legal")
         sec2.append("Sound effects", "win.sounds")
-        sec2.append("About Roblox Vault", "win.about")
+        sec2.append("About Baseplate", "win.about")
         menu.append_section(None, sec2)
         sec3 = Gio.Menu()
         sec3.append("Delete all my data…", "win.delete-all")
-        sec3.append("Uninstall Roblox Vault…", "win.uninstall")
+        sec3.append("Uninstall Baseplate…", "win.uninstall")
         menu.append_section(None, sec3)
         b = Gtk.MenuButton(icon_name="open-menu-symbolic", menu_model=menu)
         label(b, "Main menu (F10)")
@@ -679,6 +784,12 @@ class MainWindow(Adw.ApplicationWindow):
             "delete-all": (self.delete_all, []),
             "uninstall": (self.uninstall, []),
             "about": (self.about, []),
+            "assistant": (self.toggle_assistant, ["<Ctrl>j"]),
+            "assistant-settings": (lambda: self.assistant.open_settings(), []),
+            "sidebar": (lambda: self.sidebar_btn.set_active(not self.sidebar_btn.get_active()),
+                        ["F9"]),
+            "log": (lambda: self.log_btn.set_active(not self.log_btn.get_active()),
+                    ["<Ctrl>l"]),
         }
         for name, (fn, accels) in table.items():
             act = Gio.SimpleAction.new(name, None)
@@ -720,7 +831,7 @@ class MainWindow(Adw.ApplicationWindow):
         """Run fn; show errors as a toast. Returns fn's result, or None on error."""
         try:
             return fn(*args)
-        except core.VaultError as e:
+        except core.BaseplateError as e:
             self.toast(str(e), "error")
         except OSError as e:
             self.toast(f"File error: {e.strerror or e}", "error")
@@ -730,7 +841,7 @@ class MainWindow(Adw.ApplicationWindow):
         try:
             fn(*args)
             return True
-        except core.VaultError as e:
+        except core.BaseplateError as e:
             self.toast(str(e), "error")
         except OSError as e:
             self.toast(f"File error: {e.strerror or e}", "error")
@@ -742,27 +853,57 @@ class MainWindow(Adw.ApplicationWindow):
         def run():
             try:
                 result, err = work(), None
-            except core.VaultError as e:
+            except core.BaseplateError as e:
                 result, err = None, e
             except Exception as e:  # noqa: BLE001 - never crash on odd Figma data
-                result, err = None, core.VaultError(f"Unexpected Figma data: {e}")
+                result, err = None, core.BaseplateError(f"Something unexpected happened: {e}")
             GLib.idle_add(on_done, result, err)
         threading.Thread(target=run, daemon=True).start()
 
     # --- lists
+    GROUPS = {"notes": "Notes", "server": "Server", "client": "Client",
+              "shared": "Shared", "gui": "GUI"}
+    ICONS = {"notes": "accessories-text-editor-symbolic", "server": "network-server-symbolic",
+             "client": "input-gaming-symbolic", "shared": "emblem-shared-symbolic",
+             "gui": "view-grid-symbolic", "system": "folder-symbolic"}
+
     @staticmethod
-    def _row(text, data):
+    def _group(rel):
+        parts = rel.split("/")
+        return parts[1] if len(parts) > 2 and parts[0] == "src" else "notes"
+
+    @classmethod
+    def _row(cls, text, data, icon=None, extra=None):
         row = Gtk.ListBoxRow()
-        row.set_child(Gtk.Label(label=text, xalign=0, margin_start=6,
-                                margin_top=4, margin_bottom=4, ellipsize=3))
+        box = Gtk.Box(spacing=8, margin_start=6, margin_top=5, margin_bottom=5)
+        if icon:
+            img = Gtk.Image(icon_name=cls.ICONS.get(icon, icon),
+                            accessible_role=Gtk.AccessibleRole.PRESENTATION)
+            img.add_css_class("bp-row-icon")
+            box.append(img)
+        box.append(Gtk.Label(label=text, xalign=0, ellipsize=3, hexpand=True))
+        if extra:
+            tag = Gtk.Label(label=extra, margin_end=6)
+            tag.add_css_class("bp-chip")
+            box.append(tag)
+        row.set_child(box)
         row.data = data
-        label(row, text)
+        row.group = icon
+        label(row, text + (f" ({extra})" if extra else ""))
         return row
+
+    def _file_header(self, row, before):
+        if before is None or before.group != row.group:
+            h = Gtk.Label(label=self.GROUPS.get(row.group, "").upper(), xalign=0)
+            h.add_css_class("bp-group-header")
+            row.set_header(h)
+        else:
+            row.set_header(None)
 
     def _reload_projects(self, select=None):
         self.projects.remove_all()
         for name in core.list_projects():
-            row = self._row(name, name)
+            row = self._row(name, name, "system")
             self.projects.append(row)
             if name == select:
                 self.projects.select_row(row)
@@ -773,10 +914,13 @@ class MainWindow(Adw.ApplicationWindow):
             return
         linked = figma.linked_guis(self.project)
         for rel in core.list_files(self.project):
-            pretty = rel.removeprefix("src/")
-            if rel.startswith("src/gui/") and Path(rel).name.removesuffix(".model.json") in linked:
-                pretty += "  (Figma)"
-            row = self._row(pretty, rel)
+            group = self._group(rel)
+            name = Path(rel).name
+            extra = None
+            if group == "gui":
+                name = name.removesuffix(".model.json")
+                extra = "Figma" if name in linked else None
+            row = self._row(name, rel, group, extra)
             self.files.append(row)
             if rel == select:
                 self.files.select_row(row)
@@ -788,6 +932,7 @@ class MainWindow(Adw.ApplicationWindow):
     def _open_project(self, name):
         self.project, self.file = name, None
         self._set_editor(None, "")
+        self.assistant.clear()
         self._reload_files(select="notes.md")
 
     def _file_selected(self, _lb, row):
@@ -804,18 +949,32 @@ class MainWindow(Adw.ApplicationWindow):
         return bool(rel) and rel.endswith(".model.json")
 
     def _set_editor(self, rel, text):
+        if GtkSource:  # opening a file isn't something Ctrl+Z should undo
+            self.buffer.begin_irreversible_action()
         self.buffer.set_text(text)
+        if GtkSource:
+            self.buffer.end_irreversible_action()
         self.dirty = False
         self.editor.set_sensitive(rel is not None)
-        self.file_title.set_label(f"{self.project} / {rel}" if rel else
-                                  (self.project or "Pick or create a project"))
+        self._update_path()
         self.preview.set_text(text if self._is_gui(rel) else None)
+
+    def _update_path(self):
+        if self.file:
+            folder, _, name = f"{self.project}/{self.file}".rpartition("/")
+            self.path_dir.set_label(folder + "/")
+            self.path_name.set_label(name)
+        else:
+            self.path_dir.set_label(self.project + "/" if self.project else "")
+            self.path_name.set_label("" if self.project else
+                                     "Pick a system on the left, or press + to make one")
+        self.file_title.set_label("• unsaved" if self.dirty else "")
 
     def _changed(self, *_):
         if not self.file:
             return
         self.dirty = True
-        self.file_title.set_label(f"{self.project} / {self.file} •")
+        self.file_title.set_label("• unsaved")
         if self._is_gui(self.file):  # live preview while typing (debounced)
             if self._preview_timer:
                 GLib.source_remove(self._preview_timer)
@@ -857,7 +1016,7 @@ class MainWindow(Adw.ApplicationWindow):
     # --- actions
     def need_project(self):
         if not self.project:
-            self.toast("Create or pick a project first.")
+            self.toast("Pick a system on the left first, or press + to make one.")
             return False
         return True
 
@@ -865,11 +1024,12 @@ class MainWindow(Adw.ApplicationWindow):
         def ok(name, _c):
             if self.guard(core.create_project, name):
                 self._reload_projects(select=name.strip())
-                self.toast(f'Project "{name.strip()}" created.', "success")
-        ask_text(self, "New project", "A project holds one system, e.g. Inventory.",
-                 "Project name", ok)
+                self.toast(f'System "{name.strip()}" created.', "success")
+        ask_text(self, "New system", "Each system is its own Rojo project, like "
+                 "InventorySystem or ShopSystem.", "System name", ok)
 
-    def new_script(self):
+    def new_script(self, code: str | None = None):
+        """New script; with code (from the assistant) it starts with that code."""
         if not self.need_project():
             return
         kinds = ["Script (server)", "LocalScript (client)", "ModuleScript (shared)"]
@@ -879,11 +1039,70 @@ class MainWindow(Adw.ApplicationWindow):
                             kinds[1]: ("LocalScript", "client"),
                             kinds[2]: ("ModuleScript", "shared")}[choice]
             rel = self.guard(core.create_script, self.project, folder, name, kind)
-            if rel:
-                self._reload_files(select=rel)
-                self.show_page("code")
-                self.sounds.play("success")
+            if not rel:
+                return
+            if code is not None and not self.attempt(core.write_file, self.project, rel, code):
+                return
+            self._reload_files(select=rel)
+            self.show_page("code")
+            self.sounds.play("success")
         ask_text(self, "New script", None, "Script name", ok, ("Type", kinds))
+
+    # --- assistant hooks
+    def assistant_context(self, with_file: bool, with_project: bool) -> str:
+        text = None
+        if with_file and self.file:
+            text = self.buffer.get_text(*self.buffer.get_bounds(), False)
+        files, notes = [], None
+        if with_project and self.project:
+            files = core.list_files(self.project)
+            try:
+                notes = core.read_file(self.project, "notes.md")
+            except (OSError, core.BaseplateError):
+                notes = None
+        return assistant.build_context(self.project if (with_file or with_project) else None,
+                                       files, self.file if with_file else None, text, notes)
+
+    def apply_code(self, code: str):
+        """Replace the open file with the assistant's code. Undo with Ctrl+Z."""
+        if not self.file:
+            return self.toast("Open a file first, or use New script…")
+        self.buffer.begin_user_action()
+        self.buffer.delete(*self.buffer.get_bounds())
+        self.buffer.insert(self.buffer.get_start_iter(), code)
+        self.buffer.end_user_action()
+        self.show_page("code")
+        self.toast("Applied. Check it, then save (Ctrl+S). Ctrl+Z undoes it.", "success")
+
+    def insert_code(self, code: str):
+        if not self.file:
+            return self.toast("Open a file first.")
+        self.buffer.begin_user_action()
+        self.buffer.insert_at_cursor(code)
+        self.buffer.end_user_action()
+        self.show_page("code")
+
+    def update_status(self):
+        if not hasattr(self, "ai_chip"):
+            return
+        a = self.assistant
+        self.ai_chip.set_label(f"AI · {assistant.PROVIDERS[a.provider].short} · "
+                               f"{a.model or 'no model'}")
+        if self.rojo.running:
+            self.sync_chip.set_label(f"● Syncing {self.rojo.project} · localhost:"
+                                     f"{self.app.settings.port}")
+            self.sync_chip.remove_css_class("off")
+            self.sync_chip.add_css_class("on")
+        else:
+            self.sync_chip.set_label("Sync off")
+            self.sync_chip.remove_css_class("on")
+            self.sync_chip.add_css_class("off")
+
+    def toggle_assistant(self):
+        show = not self.ai_split.get_show_sidebar()
+        self.ai_split.set_show_sidebar(show)
+        if show:
+            self.assistant.focus_input()
 
     def new_gui(self):
         if not self.need_project():
@@ -911,7 +1130,7 @@ class MainWindow(Adw.ApplicationWindow):
                 return
         if self.attempt(core.write_file, self.project, self.file, text):
             self.dirty = False
-            self.file_title.set_label(f"{self.project} / {self.file}")
+            self.file_title.set_label("")
             if self.file.startswith("src/gui/"):
                 core.write_project_file(self.project)
 
@@ -1001,7 +1220,7 @@ class MainWindow(Adw.ApplicationWindow):
                                                taken.node_id, scale)
             except figma.NameTaken as again:
                 return self._rename_import(project, again, scale)
-            except core.VaultError as e:
+            except core.BaseplateError as e:
                 self.toast(str(e), "error")
                 return self._rename_import(project, taken, scale)
             self._imported(project, *result)
@@ -1080,15 +1299,18 @@ class MainWindow(Adw.ApplicationWindow):
                 self._log(f"--- Syncing {self.project} on localhost:{port}. "
                           "In Studio: Plugins → Rojo → Connect.\n")
                 self.sounds.play("sync_on")
+                self.update_status()
             else:
                 btn.set_active(False)
         elif self.rojo.running:
             self.rojo.stop()
             self.sounds.play("sync_off")
+            self.update_status()
 
     def _rojo_exited(self, code):
         self._log(f"--- Rojo stopped (exit code {code}).\n")
         self.sync_btn.set_active(False)
+        self.update_status()
 
     def _log(self, line):
         buf = self.log_view.get_buffer()
@@ -1128,7 +1350,9 @@ class MainWindow(Adw.ApplicationWindow):
 
     def shortcuts(self):
         lines = ("Alt+1 / 2 / 3  Code / Preview / Figma tabs\n"
-                 "Ctrl+Shift+N  New project\nCtrl+N  New script\nCtrl+G  New GUI\n"
+                 "Ctrl+J  Show/hide the assistant\nEnter  Send (Shift+Enter: new line)\n"
+                 "F9  Show/hide systems and files\nCtrl+L  Show/hide the log\n"
+                 "Ctrl+Shift+N  New system\nCtrl+N  New script\nCtrl+G  New GUI\n"
                  "Ctrl+S  Save\nCtrl+I  Import selected Figma frame\n"
                  "Ctrl+Shift+R  Update GUIs from Figma\nCtrl+R  Start/stop sync\n"
                  "Ctrl+B  Build place file\nF10  Main menu\n"
@@ -1150,11 +1374,11 @@ class MainWindow(Adw.ApplicationWindow):
             dlg = Adw.MessageDialog(
                 transient_for=self, heading="Your data is deleted",
                 body="One last step: in the COSMIC Store open Installed, find "
-                     "Roblox Vault and press Uninstall.")
-            dlg.add_response("ok", "Close Roblox Vault")
+                     "Baseplate and press Uninstall.")
+            dlg.add_response("ok", "Close Baseplate")
             dlg.connect("response", lambda *_: self.app.quit())
             dlg.present()
-        confirm(self, "Uninstall Roblox Vault?",
+        confirm(self, "Uninstall Baseplate?",
                 "This removes the app and its icon, and permanently deletes every "
                 "project, script, GUI, note, setting, your Figma connection and "
                 "the Figma tab's cookies, including anything left by the older zip "
@@ -1188,7 +1412,7 @@ class MainWindow(Adw.ApplicationWindow):
         about.add_legal_section("WebKitGTK", "Copyright the WebKit contributors",
                                 Gtk.License.LGPL_2_1, None)
         about.add_legal_section("Icon and sound effects",
-                                "Original work made for Roblox Vault",
+                                "Original work made for Baseplate",
                                 Gtk.License.MIT_X11, None)
         about.present()
 
@@ -1230,11 +1454,38 @@ class App(Adw.Application):
             moved = 0
         if moved:
             self.win._reload_projects()
-            self.win.toast(f"Brought over {moved} project(s) from the older version.",
-                           "success")
+            self.win.toast(f"Brought over {moved} system(s) from Roblox Vault.", "success")
+        if not self.settings.get("asked_remove_old"):
+            self.win.in_background(core.old_app_installed, self._offer_remove_old)
+
+    def _offer_remove_old(self, installed, _err):
+        """Roblox Vault is this app's old name. Offer to remove it, once."""
+        if not installed:
+            return
+        self.settings.set("asked_remove_old", True)
+        dlg = Adw.AlertDialog(
+            heading="Remove Roblox Vault?",
+            body="Baseplate is the new version of Roblox Vault, and your systems "
+                 "have been copied into it. Remove the old app and its data?")
+        dlg.add_response("keep", "Keep it")
+        dlg.add_response("remove", "Remove Roblox Vault")
+        dlg.set_response_appearance("remove", Adw.ResponseAppearance.DESTRUCTIVE)
+        dlg.set_default_response("keep")
+        dlg.set_close_response("keep")
+
+        def done(_d, r):
+            if r != "remove":
+                return
+            self.win.in_background(core.remove_old_app, lambda ok, _e: self.win.toast(
+                "Roblox Vault removed." if ok else
+                "Couldn't remove Roblox Vault. Uninstall it from the COSMIC Store.",
+                "delete" if ok else "error"))
+        dlg.connect("response", done)
+        dlg.present(self.win)
 
     def do_startup(self):
         Adw.Application.do_startup(self)
+        theme.apply()
         # Running from source: find the icon next to the code.
         icons = Path(__file__).resolve().parent.parent / "data" / "icons"
         display = Gdk.Display.get_default()

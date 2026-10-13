@@ -4,7 +4,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from roblox_vault import core
+from baseplate import core
 
 
 class CoreTests(unittest.TestCase):
@@ -41,11 +41,11 @@ class CoreTests(unittest.TestCase):
         core.create_project("Inventory")
         for bad in ("InventorySystemV3", "PlayerMovement_New", "Weapon_Final",
                     "Health_Updated", "Shop v2"):
-            with self.assertRaises(core.VaultError):
+            with self.assertRaises(core.BaseplateError):
                 core.create_project(bad)
-            with self.assertRaises(core.VaultError):
+            with self.assertRaises(core.BaseplateError):
                 core.create_script("Inventory", "server", bad, "Script")
-            with self.assertRaises(core.VaultError):
+            with self.assertRaises(core.BaseplateError):
                 core.create_gui("Inventory", bad)
         for good in ("InventorySystem", "PlayerMovement", "Weapon", "Renew", "Player2"):
             core.create_script("Inventory", "shared", good, "ModuleScript")
@@ -69,12 +69,12 @@ class CoreTests(unittest.TestCase):
 
     def test_rejects_bad_names_and_traversal(self):
         for bad in ("", "../x", "a/b", "x" * 70):
-            with self.assertRaises(core.VaultError):
+            with self.assertRaises(core.BaseplateError):
                 core.create_project(bad)
         core.create_project("Safe")
-        with self.assertRaises(core.VaultError):
+        with self.assertRaises(core.BaseplateError):
             core.read_file("Safe", "../../../etc/passwd")
-        with self.assertRaises(core.VaultError):
+        with self.assertRaises(core.BaseplateError):
             core.create_project("Safe")  # duplicate
 
     def test_consent_versioned(self):

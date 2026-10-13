@@ -18,7 +18,7 @@ OUT = Path(__file__).resolve().parent / "rojo.json"
 
 
 def get(url):
-    req = urllib.request.Request(url, headers={"User-Agent": "roblox-vault-build"})
+    req = urllib.request.Request(url, headers={"User-Agent": "baseplate-build"})
     token = os.environ.get("GITHUB_TOKEN")
     if token and url.startswith("https://api.github.com/"):
         req.add_header("Authorization", f"Bearer {token}")

@@ -4,7 +4,7 @@
 # GitHub then builds it and the COSMIC Store offers the update.
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-ID=io.github.jayswansocool48.RobloxVault
+ID=io.github.jayswansocool48.Baseplate
 cd "$ROOT"
 
 version="${1:-}"; notes="${2:-}"
@@ -20,7 +20,7 @@ import datetime, re, sys
 from pathlib import Path
 from xml.sax.saxutils import escape
 version, notes, app_id = sys.argv[1:]
-core = Path("roblox_vault/core.py")
+core = Path("baseplate/core.py")
 core.write_text(re.sub(r'APP_VERSION = "[^"]*"', f'APP_VERSION = "{version}"', core.read_text()))
 meta = Path(f"data/{app_id}.metainfo.xml")
 text = meta.read_text()
@@ -33,9 +33,9 @@ entry = (f'    <release version="{version}" date="{today}">\n'
 meta.write_text(text.replace("  <releases>\n", "  <releases>\n" + entry, 1))
 PY
 
-git add roblox_vault/core.py "data/$ID.metainfo.xml"
+git add baseplate/core.py "data/$ID.metainfo.xml"
 git commit -q -m "Release $version"
 git tag "v$version"
 git push -q origin HEAD "v$version"
-gh release create "v$version" --title "Roblox Vault $version" --notes "$notes" >/dev/null
+gh release create "v$version" --title "Baseplate $version" --notes "$notes" >/dev/null
 echo "Released $version. GitHub is building it now; the COSMIC Store offers it in about 10 minutes."

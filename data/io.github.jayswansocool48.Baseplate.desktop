@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Name=Baseplate
+GenericName=Roblox Studio Companion
+Comment=Build, design and sync Roblox systems, with an AI assistant
+Exec=baseplate
+Icon=io.github.jayswansocool48.Baseplate
+Terminal=false
+Categories=Development;IDE;
+Keywords=roblox;luau;rojo;studio;scripts;gui;figma;ai;claude;chatgpt;ollama;
+StartupNotify=true
+StartupWMClass=io.github.jayswansocool48.Baseplate

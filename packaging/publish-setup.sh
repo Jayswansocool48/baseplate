@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# One command: put Roblox Vault on GitHub, publish it, and install it.
+# One command: put Baseplate on GitHub, publish it, and install it.
 #
 #   ./packaging/publish-setup.sh
 #
@@ -14,12 +14,12 @@
 # Safe to run again: steps already done are skipped.
 set -euo pipefail
 
-NAME=roblox-vault
-APP_ID=io.github.jayswansocool48.RobloxVault
+NAME=baseplate
+APP_ID=io.github.jayswansocool48.Baseplate
 DESCRIPTION="Store, design, preview and sync Roblox systems with Studio, on Pop!_OS"
 PROJECTS="${PROJECTS_DIR:-$HOME/Projects}"
 KIT="$PROJECTS/apps/github-kit"
-KEY_BACKUP="$HOME/.config/roblox-vault-publishing/signing-key.asc"
+KEY_BACKUP="$HOME/.config/baseplate-publishing/signing-key.asc"
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 step() { printf '\n== %s\n' "$1"; }
@@ -39,7 +39,7 @@ if gh repo view "$REPO" >/dev/null 2>&1; then
   git -C "$ROOT" rev-parse >/dev/null 2>&1 || ROOT="$PROJECTS/$NAME"
 else
   [[ -x "$KIT/add-app.sh" ]] || gh repo clone "$OWNER/apps" "$PROJECTS/apps"
-  COMMIT_MESSAGE="Add Roblox Vault" "$KIT/add-app.sh" "$NAME" "$HERE" --public \
+  COMMIT_MESSAGE="Add Baseplate" "$KIT/add-app.sh" "$NAME" "$HERE" --public \
     --description "$DESCRIPTION"
   ROOT="$PROJECTS/$NAME"
 fi
@@ -52,7 +52,7 @@ else
   GNUPGHOME="$(mktemp -d)"; export GNUPGHOME
   trap 'rm -rf "$GNUPGHOME"' EXIT
   gpg --batch --pinentry-mode loopback --passphrase '' --quick-gen-key \
-    "Roblox Vault updates <$OWNER@users.noreply.github.com>" rsa4096 sign never 2>/dev/null
+    "Baseplate updates <$OWNER@users.noreply.github.com>" rsa4096 sign never 2>/dev/null
   mkdir -p "$(dirname "$KEY_BACKUP")"
   (umask 077; gpg --batch --armor --export-secret-keys > "$KEY_BACKUP")
   gh secret set FLATPAK_GPG_KEY --repo "$REPO" < "$KEY_BACKUP"
@@ -78,10 +78,10 @@ RUN="$(gh run list --repo "$REPO" --workflow flatpak.yml --event workflow_dispat
         --limit 1 --json databaseId --jq '.[0].databaseId')"
 gh run watch "$RUN" --repo "$REPO" --exit-status
 
-step "Installing Roblox Vault"
+step "Installing Baseplate"
 flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
 for try in 1 2 3 4 5; do
-  if flatpak install --user -y --noninteractive "$URL/roblox-vault.flatpakref"; then
+  if flatpak install --user -y --noninteractive "$URL/baseplate.flatpakref"; then
     break
   fi
   echo "GitHub Pages is still updating, trying again in 30 seconds…"; sleep 30
@@ -94,5 +94,5 @@ rm -rf "$HOME/.local/share/roblox-vault-app" "$HOME/.local/bin/roblox-vault" \
 echo "Done. Your old projects are copied into the new app when it first starts."
 
 step "All set"
-echo "Open Roblox Vault from your app launcher."
+echo "Open Baseplate from your app launcher."
 echo "To release an update later:  ./packaging/release.sh 1.1.0 \"What changed\""

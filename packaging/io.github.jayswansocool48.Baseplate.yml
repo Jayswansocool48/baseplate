@@ -1,10 +1,10 @@
-# Flatpak manifest for Roblox Vault.
+# Flatpak manifest for Baseplate.
 # Build locally:  packaging/build.sh      Published by: .github/workflows/flatpak.yml
-id: io.github.jayswansocool48.RobloxVault
+id: io.github.jayswansocool48.Baseplate
 runtime: org.gnome.Platform
 runtime-version: '50'
 sdk: org.gnome.Sdk
-command: roblox-vault
+command: baseplate
 
 finish-args:
   - --share=ipc
@@ -13,7 +13,8 @@ finish-args:
   - --device=dri                 # WebKit (Figma tab) drawing
   - --share=network              # Figma tab + Figma API; Rojo talks to Studio on localhost
   - --socket=pulseaudio          # sound effects
-  - --filesystem=xdg-data/roblox-vault:ro   # read projects from the older zip version once
+  - --filesystem=xdg-data/roblox-vault:ro   # copy projects from the zip version once
+  - --filesystem=~/.var/app/io.github.jayswansocool48.RobloxVault/data/roblox-vault:ro  # and from Roblox Vault
   - --talk-name=org.freedesktop.Flatpak     # Uninstall button removes the app itself
 
 cleanup:
@@ -24,13 +25,13 @@ modules:
   # Rojo (Studio sync). rojo.json is written by packaging/pin-rojo.py.
   - rojo.json
 
-  - name: roblox-vault
+  - name: baseplate
     buildsystem: simple
     build-commands:
-      - install -d /app/share/roblox-vault
-      - cp -r roblox_vault /app/share/roblox-vault/
-      - find /app/share/roblox-vault -name '__pycache__' -prune -exec rm -rf {} +
-      - install -Dm755 packaging/roblox-vault.sh /app/bin/roblox-vault
+      - install -d /app/share/baseplate
+      - cp -r baseplate /app/share/baseplate/
+      - find /app/share/baseplate -name '__pycache__' -prune -exec rm -rf {} +
+      - install -Dm755 packaging/baseplate.sh /app/bin/baseplate
       - install -Dm644 data/${FLATPAK_ID}.desktop /app/share/applications/${FLATPAK_ID}.desktop
       - install -Dm644 data/${FLATPAK_ID}.metainfo.xml /app/share/metainfo/${FLATPAK_ID}.metainfo.xml
       - install -Dm644 data/icons/hicolor/scalable/apps/${FLATPAK_ID}.svg /app/share/icons/hicolor/scalable/apps/${FLATPAK_ID}.svg

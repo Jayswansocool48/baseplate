@@ -1,5 +1,5 @@
 THIRD-PARTY SOFTWARE & LICENSES
-Version 2026-10-12
+Version 2026-10-13
 
 Audit of everything the app uses. None of these collect or send data.
 
@@ -14,6 +14,15 @@ Provided by the GNOME Flatpak runtime (from Flathub, shared with other apps):
 - WebKitGTK 6 (Figma tab) - LGPL 2.1 / BSD
 - GStreamer (plays the sound effects) - LGPL 2.1 or later
 
+AI assistant (optional, you choose one in Assistant settings):
+- Ollama (ollama.com), runs on your computer - MIT License. The app talks to
+  it on localhost. Models you download for it have their own licenses.
+- Anthropic API (Claude) - only with your own API key, only when you send a
+  message. Anthropic's terms and privacy policy apply.
+- OpenAI API (ChatGPT) - only with your own API key, only when you send a
+  message. OpenAI's terms and privacy policy apply.
+  No AI SDKs are bundled; the app uses Python's built-in urllib.
+
 Online services, only if you open the Figma tab (optional):
 - figma.com, shown in the Figma tab through WebKitGTK. Figma's website runs its
   own code and cookies there; see Figma's privacy and cookie policies.
@@ -25,7 +34,7 @@ in the app.
 
 Fonts, icon and sounds:
 - Fonts: your system's fonts. The app ships none.
-- App icon: original artwork made for Roblox Vault (MIT License).
+- App icon: original artwork made for Baseplate (MIT License).
 - Sound effects: generated from scratch by tools/make_sounds.py, no samples
   (MIT License).
 - Other icons come from your system icon theme.
@@ -33,14 +42,15 @@ Fonts, icon and sounds:
 What the app is allowed to do (Flatpak permissions), and why:
 - Show windows (Wayland/X11), use the graphics card: to draw the app and the
   Figma tab.
-- Network: for the Figma tab and Figma imports, and for Rojo to talk to
-  Roblox Studio on this computer.
+- Network: for the Figma tab and Figma imports, for the assistant (Claude,
+  ChatGPT, or Ollama on this computer), and for Rojo to talk to Roblox Studio
+  on this computer.
 - Sound: for the sound effects (you can turn them off in the menu).
-- Read ~/.local/share/roblox-vault: only to copy projects from the older zip
-  version, once. Read-only.
-- Talk to Flatpak: so "Uninstall Roblox Vault..." can remove the app itself and
-  the older version's files. This is a powerful permission (it can run commands
-  outside the sandbox); the app uses it only for uninstalling, after you
-  confirm.
+- Read ~/.local/share/roblox-vault and Roblox Vault's projects folder: only
+  to copy projects from the app's earlier versions, once. Read-only.
+- Talk to Flatpak: so "Uninstall Baseplate..." can remove the app itself, and
+  so the app can remove Roblox Vault and the older zip version's files. This
+  is a powerful permission (it can run commands outside the sandbox); the app
+  uses it only for those removals, after you confirm.
 
-Roblox Vault itself: MIT License.
+Baseplate itself: MIT License.

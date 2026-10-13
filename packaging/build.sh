@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# Build Roblox Vault as a Flatpak on this computer and install it (for testing
+# Build Baseplate as a Flatpak on this computer and install it (for testing
 # changes before you publish them).   ./packaging/build.sh
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-ID=io.github.jayswansocool48.RobloxVault
+ID=io.github.jayswansocool48.Baseplate
 cd "$ROOT"
 
 flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
@@ -19,4 +19,4 @@ python3 -m unittest discover -t . -s tests
 
 "${BUILDER[@]}" --user --install --force-clean --install-deps-from=flathub \
   --default-branch=stable build "packaging/$ID.yml"
-echo "Installed. Open Roblox Vault from your app launcher, or run: flatpak run $ID"
+echo "Installed. Open Baseplate from your app launcher, or run: flatpak run $ID"

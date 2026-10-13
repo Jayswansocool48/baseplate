@@ -8,19 +8,19 @@ import os
 import sys
 from pathlib import Path
 
-APP_ID = "io.github.jayswansocool48.RobloxVault"
-TITLE = "Roblox Vault"
+APP_ID = "io.github.jayswansocool48.Baseplate"
+TITLE = "Baseplate"
 
 
 def main():
     site, gpg = Path(sys.argv[1]), sys.argv[2].strip()
     owner, repo = os.environ.get("GITHUB_REPOSITORY",
-                                 "Jayswansocool48/roblox-vault").split("/")
+                                 "Jayswansocool48/baseplate").split("/")
     base = f"https://{owner.lower()}.github.io/{repo}"
     home = f"https://github.com/{owner}/{repo}"
     flathub = "https://dl.flathub.org/repo/flathub.flatpakrepo"
 
-    (site / "roblox-vault.flatpakrepo").write_text(f"""[Flatpak Repo]
+    (site / "baseplate.flatpakrepo").write_text(f"""[Flatpak Repo]
 Title={TITLE}
 Url={base}/repo/
 Homepage={home}
@@ -28,18 +28,18 @@ Comment=Updates for {TITLE}
 Description=The {TITLE} app for Pop!_OS, built from {home}
 GPGKey={gpg}
 """)
-    (site / "roblox-vault.flatpakref").write_text(f"""[Flatpak Ref]
+    (site / "baseplate.flatpakref").write_text(f"""[Flatpak Ref]
 Name={APP_ID}
 Branch=stable
 Title={TITLE}
 Url={base}/repo/
-SuggestRemoteName=roblox-vault
+SuggestRemoteName=baseplate
 Homepage={home}
 IsRuntime=false
 GPGKey={gpg}
 RuntimeRepo={flathub}
 """)
-    cmd = f"flatpak install --user {base}/roblox-vault.flatpakref"
+    cmd = f"flatpak install --user {base}/baseplate.flatpakref"
     (site / "index.html").write_text(f"""<!doctype html>
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -59,9 +59,9 @@ RuntimeRepo={flathub}
 <p>Open a terminal and run:</p>
 <pre>{html.escape(cmd)}</pre>
 <p>Updates then arrive in the COSMIC Store with your other apps.
-To uninstall, use the app's menu → <b>Uninstall Roblox Vault…</b>, or the COSMIC Store.</p>
-<p>Other files: <a href="roblox-vault.flatpakrepo">repository file</a> ·
-<a href="RobloxVault.flatpak">offline installer</a> · <a href="{home}">source code</a></p>
+To uninstall, use the app's menu → <b>Uninstall Baseplate…</b>, or the COSMIC Store.</p>
+<p>Other files: <a href="baseplate.flatpakrepo">repository file</a> ·
+<a href="Baseplate.flatpak">offline installer</a> · <a href="{home}">source code</a></p>
 <p><small>Not affiliated with or endorsed by Roblox Corporation or Figma, Inc.</small></p>
 </body></html>
 """)

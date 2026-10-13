@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate the app's sound effects into roblox_vault/sounds/.
+"""Generate the app's sound effects into baseplate/sounds/.
 
 The sounds are synthesized here from scratch (no samples), so they are
 original work released with the app under the MIT License.
@@ -13,7 +13,7 @@ from pathlib import Path
 
 RATE = 22050
 PEAK = 0.30  # about -10 dBFS, gentle next to system sounds
-OUT = Path(__file__).resolve().parent.parent / "roblox_vault" / "sounds"
+OUT = Path(__file__).resolve().parent.parent / "baseplate" / "sounds"
 
 
 def env(i, n, attack=0.008, release=0.06):
